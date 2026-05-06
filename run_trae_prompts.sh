@@ -64,8 +64,9 @@ apply_defaults() {
   KEEP_FAILED_REPOS="${KEEP_FAILED_REPOS:-false}"
   VALIDATE_JSON="${VALIDATE_JSON:-true}"
   DRY_RUN="${DRY_RUN:-false}"
+  CONFIG_FILE="${CONFIG_FILE:-/qwarium/home/ext.arlatyshev/trae-agent_analyse/trae_config.json}
 
-  TRAE_AGENT_CMD="${TRAE_AGENT_CMD:-trae-cli run --file \"\$PROMPT_FILE\" --working-dir \"\$REPO_DIR\" --console-type simple --config-file /qwarium/home/ext.arlatyshev/trae-agent_analyse/trae_config.json}"
+  TRAE_AGENT_CMD="${TRAE_AGENT_CMD:-trae-cli run --file \"\$PROMPT_FILE\" --working-dir \"\$REPO_DIR\" --console-type simple --config-file \"\$CONFIG_FILE\" "}"
   AGENT_ENV_PASSTHROUGH="${AGENT_ENV_PASSTHROUGH:-OPENAI_API_KEY OPENAI_BASE_URL ANTHROPIC_API_KEY ANTHROPIC_BASE_URL GOOGLE_API_KEY GOOGLE_BASE_URL OPENROUTER_API_KEY OPENROUTER_BASE_URL DOUBAO_API_KEY DOUBAO_BASE_URL TRAE_CONFIG_FILE LANG LC_ALL}"
 }
 
