@@ -48,7 +48,7 @@ load_env() {
 }
 
 apply_defaults() {
-  PYTHON_BIN="${PYTHON_BIN:-python3}"
+  PYTHON_BIN="${PYTHON_BIN:-python}"
   JQ_BIN="${JQ_BIN:-jq}"
 
   PROMPTS_DIR="${PROMPTS_DIR:-/Users/nident/Desktop/JOB/ScolTech/vul-awesome-skills/data/generated_prompts}"
@@ -112,7 +112,7 @@ validate_config() {
 try:
     import yaml
 except ImportError as exc:
-    raise SystemExit("PyYAML is required: python3 -m pip install PyYAML") from exc
+    raise SystemExit("PyYAML is required: python -m pip install PyYAML") from exc
 PY
 
   [[ -d "$PROMPTS_DIR" ]] || die "PROMPTS_DIR does not exist: $PROMPTS_DIR"
