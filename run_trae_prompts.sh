@@ -21,6 +21,8 @@ LOG_FILE="${LOG_FILE:-$HOME/trae_run.log}"
 TRAE_BIN="${TRAE_BIN:-trae-cli}"
 TRAE_CONFIG_FILE="${TRAE_CONFIG_FILE:-${CONFIG_FILE:-}}"
 TRAE_CONSOLE_TYPE="${TRAE_CONSOLE_TYPE:-simple}"
+TRAE_LIVE_LOG="${TRAE_LIVE_LOG:-true}"
+LOG_TAIL_LINES="${LOG_TAIL_LINES:-80}"
 CLEAN_EXTRA_PATHS="${CLEAN_EXTRA_PATHS:-.git .hg .svn .bzr .github .gitlab .circleci .travis.yml .gitmodules .gitignore .gitattributes}"
 
 mkdir -p "$WORK_ROOT" "$OUTPUT_DIR"
@@ -88,6 +90,7 @@ run_trae() {
   local repo_dir="$1"
   local prompt_file="$2"
   local -a cmd
+  local rc
 
   cmd=("$TRAE_BIN" run -f "$prompt_file" --working-dir "$repo_dir" --console-type "$TRAE_CONSOLE_TYPE")
 
@@ -95,23 +98,52 @@ run_trae() {
     cmd+=(--config-file "$TRAE_CONFIG_FILE")
   fi
 
+  log "[debug] repo_dir=$repo_dir"
+  log "[debug] prompt_file=$prompt_file"
+  log "[debug] config_file=${TRAE_CONFIG_FILE:-<default>}"
+  {
+    printf '[debug] command:'
+    printf ' %q' "${cmd[@]}"
+    printf '\n'
+  } | tee -a "$LOG_FILE"
+
   (
     cd "$repo_dir"
-    "${cmd[@]}"
-  ) >> "$LOG_FILE" 2>&1
+    set +e
+    if [ "$TRAE_LIVE_LOG" = "true" ]; then
+      "${cmd[@]}" 2>&1 | tee -a "$LOG_FILE"
+      rc=${PIPESTATUS[0]}
+    else
+      "${cmd[@]}" >> "$LOG_FILE" 2>&1
+      rc=$?
+    fi
+    exit "$rc"
+  )
+}
+
+debug_missing_answer() {
+  local task_dir="$1"
+
+  log "[debug] No answer_*.json found. Files under task dir:"
+  find "$task_dir" -maxdepth 4 -type f | sort | sed 's/^/[debug] file: /' | tee -a "$LOG_FILE" || true
+
+  log "[debug] Last $LOG_TAIL_LINES log lines:"
+  tail -n "$LOG_TAIL_LINES" "$LOG_FILE" | sed 's/^/[log-tail] /' || true
 }
 
 move_answer() {
-  local repo_dir="$1"
-  local output_file="$2"
+  local task_dir="$1"
+  local repo_dir="$2"
+  local output_file="$3"
   local answer_file="$repo_dir/answer_${COMMIT}.json"
 
   if [ ! -f "$answer_file" ]; then
-    answer_file="$(find "$repo_dir" -maxdepth 2 -type f -name 'answer_*.json' | head -n 1 || true)"
+    answer_file="$(find "$task_dir" -type f -name 'answer_*.json' | head -n 1 || true)"
   fi
 
   if [ -z "$answer_file" ] || [ ! -f "$answer_file" ]; then
     log "[!] Answer not found for $PROJECT $COMMIT"
+    debug_missing_answer "$task_dir"
     return 1
   fi
 
@@ -172,7 +204,7 @@ for fn in "$PROMPT_DIR"/*.yaml; do
 
   log "[+] Running trae-cli"
   if run_trae "$repo_dir" "$prompt_file"; then
-    if move_answer "$repo_dir" "$output_file"; then
+    if move_answer "$task_dir" "$repo_dir" "$output_file"; then
       log "[+] Success: $fn"
     else
       log "[x] Failed: answer file was not created for $fn"
